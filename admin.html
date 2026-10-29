@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin – Parking Logs</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+<h2>Admin Dashboard – Parking Logs</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Vehicle Number</th>
+      <th>Slot ID</th>
+      <th>Entry Time</th>
+      <th>Exit Time</th>
+    </tr>
+  </thead>
+  <tbody id="logTable">
+    <tr>
+      <td colspan="4">Loading logs...</td>
+    </tr>
+  </tbody>
+</table>
+
+<script>
+  /* =======================
+     SUPABASE CONFIG
+  ======================= */
+  const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+  const SUPABASE_KEY =
+    ""; // 🔐 Add your Supabase anon/public key here
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  /* =======================
+     PAGE LOAD
+  ======================= */
+  window.onload = async () => {
+    // 1️⃣ Check login
+    const { data: { session } } = await client.auth.getSession();
+
+    if (!session) {
+      alert("Please login");
+      window.location.href = "login.html";
+      return;
+    }
+
+    // 2️⃣ Check admin role
+    const { data: profile, error } = await client
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .single();
+
+    if (error || profile.role !== "admin") {
+      alert("Access denied");
+      window.location.href = "dashboard.html";
+      return;
+    }
+
+    // 3️⃣ Load parking logs
+    loadLogs();
+  };
+
+  /* =======================
+     LOAD PARKING LOGS
+  ======================= */
+  async function loadLogs() {
+
+  const { data, error } = await client
+    .from("parking_logs")
+    .select(`
+      vehicle_number,
+      entry_time,
+      exit_time,
+      parking_slots (
+        slot_code
+      )
+    `)
+    .order("entry_time", { ascending: false });
+
+  const tableBody = document.getElementById("logTable");
+  tableBody.innerHTML = "";
+
+  if (error) {
+    tableBody.innerHTML =
+      "<tr><td colspan='4'>Error loading logs</td></tr>";
+    console.error(error);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    tableBody.innerHTML =
+      "<tr><td colspan='4'>No parking logs available</td></tr>";
+    return;
+  }
+
+  data.forEach(log => {
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+      <td>${log.vehicle_number}</td>
+      <td>${log.parking_slots?.slot_code || "-"}</td>
+      <td>${new Date(log.entry_time).toLocaleString()}</td>
+      <td>${log.exit_time ? new Date(log.exit_time).toLocaleString() : "-"}</td>
+    `;
+
+    tableBody.appendChild(row);
+  });
+}
+</script>
+</div>
+</body>
+</html>

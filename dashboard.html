@@ -1,0 +1,659 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    .free { color: green; font-weight: bold; }
+    .occupied { color: red; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Dashboard</h2>
+
+<button onclick="goAddVehicle()">Add Vehicle</button>
+<button onclick="goBookSlot()">Book Slot</button>
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<h3>My Vehicles 🚗</h3>
+<ul id="vehicleList">
+  <li>Loading vehicles...</li>
+</ul>
+
+<hr>
+
+<h3>Parking Slot Status 🅿️</h3>
+<ul id="slotList">
+  <li>Loading slots...</li>
+</ul>
+
+<hr>
+
+<h3>License Plate Detection 🎥</h3>
+
+<input type="file" id="videoFile" accept="video/*">
+<br><br>
+<button onclick="detectPlate()">Detect Plate</button>
+
+<p id="loading" style="color: orange;"></p>
+<p id="result" style="font-weight: bold;"></p>
+
+<script>
+
+  const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1cGhscHpkZWhnaXZpZGhkb3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MzAzOTYsImV4cCI6MjA4NjEwNjM5Nn0.2JBq_bDoXzYHINkt1hl2lrFrwKH3DufvTAAnXEAkVsM";
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // 🔐 Protect page + load data
+  window.onload = async () => {
+
+    const { data: { session } } = await client.auth.getSession();
+
+    if (!session) {
+      alert("Please login");
+      window.location.href = "login.html";
+      return;
+    }
+
+    loadVehicles();
+    loadSlots();
+  };
+  setInterval(() => {
+    loadSlots();
+}, 3000);
+
+  // 🔹 Load user vehicles
+  async function loadVehicles() {
+
+    const { data: { user } } = await client.auth.getUser();
+
+    const { data } = await client
+      .from("vehicles")
+      .select("number_plate")
+      .eq("user_id", user.id);
+
+    const list = document.getElementById("vehicleList");
+    list.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      list.innerHTML = "<li>No vehicles added</li>";
+      return;
+    }
+
+    data.forEach(v => {
+      const li = document.createElement("li");
+      li.innerText = v.number_plate;
+      list.appendChild(li);
+    });
+  }
+
+  // 🔹 Load parking slots
+  async function loadSlots() {
+
+    const { data } = await client
+      .from("parking_slots")
+      .select("*")
+      .order("id");
+
+    const list = document.getElementById("slotList");
+    list.innerHTML = "";
+
+    if (!data) return;
+
+    data.forEach(slot => {
+
+      const li = document.createElement("li");
+
+      if (slot.status === "occupied") {
+        li.innerHTML = `
+          Slot ${slot.id} →
+          <span class="occupied">OCCUPIED</span>
+          <button onclick="freeSlot(${slot.id})">Free Slot</button>
+        `;
+      } else {
+        li.innerHTML = `
+          Slot ${slot.id} →
+          <span class="free">FREE</span>
+        `;
+      }
+
+      list.appendChild(li);
+    });
+  }
+
+  // 🔹 Free Slot
+  async function freeSlot(slotId) {
+
+    await client
+      .from("parking_slots")
+      .update({ status: "free" })
+      .eq("id", slotId);
+
+    loadSlots();
+  }
+
+  // 🔹 Detect Plate (Call FastAPI)
+  async function detectPlate() {
+
+    const fileInput = document.getElementById("videoFile");
+    const loading = document.getElementById("loading");
+    const result = document.getElementById("result");
+
+    if (fileInput.files.length === 0) {
+      alert("Please upload a video");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    loading.innerText = "Processing video... ⏳";
+    result.innerText = "";
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/detect", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      loading.innerText = "";
+
+      if (data.plate) {
+        result.innerText = "Detected Plate: " + data.plate;
+      } else {
+        result.innerText = "No plate detected";
+      }
+
+    } catch (error) {
+      loading.innerText = "";
+      result.innerText = "Backend connection error ❌";
+      console.error(error);
+    }
+  }
+
+  function goAddVehicle() {
+    window.location.href = "add_vehicle.html";
+  }
+
+  function goBookSlot() {
+    window.location.href = "book_slot.html";
+  }
+
+  async function logout() {
+    await client.auth.signOut();
+    window.location.href = "login.html";
+  }
+
+</script>
+</div>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    .blueprint-container {
+      position: relative;
+      width: 750px;
+      margin-top: 20px;
+    }
+
+    .blueprint {
+      width: 100%;
+    }
+
+    .slot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;   /* circle */
+  border: 2px solid white;
+  cursor: pointer;
+  transition: 0.3s ease;
+  color: black;          /* change text color here */
+  font-size: 8px;        /* small text */
+  text-align: center;
+  line-height: 18px;     /* vertically center text */
+  font-weight: bold;
+}
+
+.free-slot {
+  background-color: #2ecc71;
+}
+
+.booked-slot {
+  background-color: #3498db;
+}
+
+.entered-slot {
+  background-color: #e74c3c;
+}
+/* ===== ENTRY / EXIT BLINKING ===== */
+
+.arrow {
+  position: absolute;
+  font-size: 32px;
+  color: yellow;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+/* ===== MOVING TRAFFIC ARROWS ===== */
+
+.road-arrow {
+  position: absolute;
+  font-size: 24px;
+  color: white;
+  /* animation: moveArrow 2s linear infinite; */
+}
+
+@keyframes moveArrow {
+  0% {
+    transform: translateX(0);
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(40px);
+    opacity: 0.3;
+  }
+}
+
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Dashboard</h2>
+
+<button onclick="goAddVehicle()">Add Vehicle</button>
+<button onclick="goBookSlot()">Book Slot</button>
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<h3>My Vehicles 🚗</h3>
+<ul id="vehicleList">
+  <li>Loading vehicles...</li>
+</ul>
+
+<hr>
+
+<h3>Parking Layout 🅿️</h3>
+
+<select id="floorSelect" onchange="loadSlots()">
+  <option value="1">Floor 1</option>
+  <option value="2">Floor 2</option>
+</select>
+
+<div class="blueprint-container">
+
+  <img src="floor1.png" class="blueprint">
+
+  <!-- ENTRY -->
+  <div class="arrow" style="top:180px; left:20px;">➡️ ENTRY</div>
+
+  <!-- EXIT -->
+  <div class="arrow" style="top:140px; right:13px;">EXIT <br>⬆️</div>
+
+  <!-- ROAD FLOW -->
+  <div class="road-arrow" style="top:420px; left:100px;">➡️</div>
+  <div class="road-arrow" style="top:420px; left:180px;">➡️</div>
+  <div class="road-arrow" style="top:420px; left:260px;">➡️</div>
+
+  <div class="road-arrow" style="top:260px; left:350px;">➡️</div>
+  <div class="road-arrow" style="top:260px; left:430px;">➡️</div>
+  <div class="road-arrow" style="top:260px; left:510px;">➡️</div>
+
+  <div class="road-arrow" style="top:140px; left:620px;">⬆️</div>
+  <div class="road-arrow" style="top:200px; left:620px;">⬆️</div>
+
+  <div id="slotOverlay"></div>
+
+</div>
+
+<hr>
+
+<h3>License Plate Detection 🎥</h3>
+
+<input type="file" id="videoFile" accept="video/*">
+<br><br>
+<button onclick="detectPlate()">Detect Plate (Upload)</button>
+
+<p id="loading" style="color: orange;"></p>
+<p id="result" style="font-weight: bold;"></p>
+
+<hr>
+
+<h4>Or Use Live Camera 📷</h4>
+
+<button onclick="startCamera()">Start Camera</button>
+<button onclick="stopCamera()">Stop Camera</button>
+
+<br><br>
+
+<video id="video" width="400" autoplay></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+
+const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+const SUPABASE_KEY = ""; // 🔐 Add your Supabase anon/public key here
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ================= PROTECT PAGE ================= */
+
+window.onload = async () => {
+
+  const { data: { session } } = await client.auth.getSession();
+
+  if (!session) {
+    alert("Please login");
+    window.location.href = "login.html";
+    return;
+  }
+
+  loadVehicles();
+  loadSlots();
+};
+
+setInterval(() => {
+  loadSlots();
+}, 3000);
+
+/* ================= LOAD VEHICLES ================= */
+
+async function loadVehicles() {
+
+  const { data: { user } } = await client.auth.getUser();
+
+  const { data } = await client
+    .from("vehicles")
+    .select("number_plate")
+    .eq("user_id", user.id);
+
+  const list = document.getElementById("vehicleList");
+  list.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    list.innerHTML = "<li>No vehicles added</li>";
+    return;
+  }
+
+  data.forEach(v => {
+    const li = document.createElement("li");
+    li.innerText = v.number_plate;
+    list.appendChild(li);
+  });
+}
+
+/* ================= LOAD SLOTS (BLUEPRINT VERSION) ================= */
+
+async function loadSlots() {
+
+  const selectedFloor = document.getElementById("floorSelect").value;
+
+  const { data } = await client
+    .from("parking_slots")
+    .select("*")
+    .eq("floor", selectedFloor)
+    .order("slot_code");
+
+  const overlay = document.getElementById("slotOverlay");
+  overlay.innerHTML = "";
+
+  if (!data) return;
+
+  data.forEach(slot => {
+
+    const div = document.createElement("div");
+    div.classList.add("slot");
+
+    if (slot.status === "free")
+      div.classList.add("free-slot");
+    else if (slot.status === "booked")
+      div.classList.add("booked-slot");
+    else if (slot.status === "occupied")
+      div.classList.add("entered-slot");
+
+    div.innerText = slot.slot_code;
+
+    // 🔥 POSITION MAPPING
+
+    const positions = {
+      // Block A (Top Row)
+      "F1A1": { top: 40, left: 143 },
+"F1A2": { top: 40, left: 190 },
+"F1A3": { top: 40, left: 228 },
+"F1A4": { top: 40, left: 273 },
+"F1A5": { top: 40, left: 310 },
+"F1A6": { top: 40, left: 348 },
+"F1A7": { top: 40, left: 397 },
+"F1A8": { top: 40, left: 437 },
+
+      // Block B (Middle Row)
+"F1B1":  { top: 220, left: 188 },
+"F1B2":  { top: 220, left: 228 },
+"F1B3":  { top: 220, left: 274 },
+"F1B4":  { top: 220, left: 310 },
+"F1B5":  { top: 220, left: 348 },
+"F1B6":  { top: 220, left: 392 },
+"F1B7":  { top: 220, left: 437 },
+"F1B8":  { top: 220, left: 485 },
+"F1B9":  { top: 220, left: 525 },
+"F1B10": { top: 220, left: 572 },
+"F1B11": { top: 220, left: 615 },
+      // Block C (Bottom Row)
+"F1C1": { top: 380, left: 143 },
+"F1C2": { top: 380, left: 190 },
+"F1C3": { top: 380, left: 228 },
+"F1C4": { top: 380, left: 273 },
+"F1C5": { top: 380, left: 310 },
+"F1C6": { top: 380, left: 349 },
+"F1C7": { top: 380, left: 396 },
+"F1C8": { top: 380, left: 437},
+"F1C9": { top: 380, left: 484 },
+"F1C10": { top: 380, left: 525 },
+"F1C11": { top: 380, left: 572 },
+"F1C12": { top: 380, left: 613 },
+"F1C13": { top: 380, left: 660 },
+"F1C14": { top: 380, left: 700 },
+// ================= FLOOR 2 =================
+
+// Block A
+"F2A1": { top: 40, left: 143 },
+"F2A2": { top: 40, left: 190 },
+"F2A3": { top: 40, left: 228 },
+"F2A4": { top: 40, left: 273 },
+"F2A5": { top: 40, left: 310 },
+"F2A6": { top: 40, left: 348 },
+"F2A7": { top: 40, left: 397 },
+"F2A8": { top: 40, left: 437 },
+
+// Block B
+"F2B1":  { top: 220, left: 188 },
+"F2B2":  { top: 220, left: 228 },
+"F2B3":  { top: 220, left: 274 },
+"F2B4":  { top: 220, left: 310 },
+"F2B5":  { top: 220, left: 348 },
+"F2B6":  { top: 220, left: 392 },
+"F2B7":  { top: 220, left: 437 },
+"F2B8":  { top: 220, left: 485 },
+"F2B9":  { top: 220, left: 525 },
+"F2B10": { top: 220, left: 572 },
+"F2B11": { top: 220, left: 615 },
+
+// Block C
+"F2C1": { top: 380, left: 143 },
+"F2C2": { top: 380, left: 190 },
+"F2C3": { top: 380, left: 228 },
+"F2C4": { top: 380, left: 273 },
+"F2C5": { top: 380, left: 310 },
+"F2C6": { top: 380, left: 349 },
+"F2C7": { top: 380, left: 396 },
+"F2C8": { top: 380, left: 437 },
+"F2C9": { top: 380, left: 484 },
+"F2C10": { top: 380, left: 525 },
+"F2C11": { top: 380, left: 572 },
+"F2C12": { top: 380, left: 613 },
+"F2C13": { top: 380, left: 660 },
+"F2C14": { top: 380, left: 700 },
+    };
+
+    const pos = positions[slot.slot_code];
+
+    if (pos) {
+      div.style.top = pos.top + "px";
+      div.style.left = pos.left + "px";
+      overlay.appendChild(div);
+    }
+  });
+}
+/* ================= FREE SLOT ================= */
+
+async function freeSlot(slotId) {
+
+  await client
+    .from("parking_slots")
+    .update({ status: "free" })
+    .eq("id", slotId);
+
+  loadSlots();
+}
+
+/* ================= VIDEO UPLOAD ================= */
+
+async function detectPlate() {
+
+  const fileInput = document.getElementById("videoFile");
+  const loading = document.getElementById("loading");
+  const result = document.getElementById("result");
+
+  if (fileInput.files.length === 0) {
+    alert("Please upload a video");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  loading.innerText = "Processing video... ⏳";
+  result.innerText = "";
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/detect", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+    loading.innerText = "";
+
+    if (data.status === "allowed")
+      result.innerText = "✅ Allowed - Slot " + data.slot + " | Plate: " + data.plate;
+    else if (data.status === "denied")
+      result.innerText = "❌ No Active Booking - Plate: " + data.plate;
+    else
+      result.innerText = "No plate detected";
+
+  } catch (error) {
+    loading.innerText = "";
+    result.innerText = "Backend connection error ❌";
+  }
+}
+
+/* ================= WEBCAM ================= */
+
+let stream;
+let cameraInterval;
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(s => {
+      stream = s;
+      document.getElementById("video").srcObject = stream;
+      cameraInterval = setInterval(sendFrame, 1000);
+    })
+    .catch(err => alert("Camera not working ❌"));
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+  }
+  clearInterval(cameraInterval);
+}
+
+async function sendFrame() {
+
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  const imageData = canvas.toDataURL("image/jpeg");
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/detect-frame", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageData })
+    });
+
+    const data = await response.json();
+
+    if (data.status === "allowed")
+      document.getElementById("result").innerText =
+        "✅ Allowed - Slot " + data.slot + " | Plate: " + data.plate;
+
+    if (data.status === "denied")
+      document.getElementById("result").innerText =
+        "❌ No Active Booking - Plate: " + data.plate;
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/* ================= NAVIGATION ================= */
+
+function goAddVehicle() { window.location.href = "add_vehicle.html"; }
+function goBookSlot() { window.location.href = "book_slot.html"; }
+async function logout() {
+  await client.auth.signOut();
+  window.location.href = "login.html";
+}
+
+</script>
+</div>
+</body>
+</html>

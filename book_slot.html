@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Book Slot</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+<div class="container">
+<h2>Book Parking Slot</h2>
+
+<label>Select Vehicle:</label><br>
+<select id="vehicleSelect"></select>
+
+<br><br>
+
+<label>Select Slot:</label><br>
+<select id="slotSelect"></select>
+
+<br><br>
+<button onclick="bookSlot()">Book Slot</button>
+
+<p id="msg"></p>
+
+<script>
+  const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+  const SUPABASE_KEY = ""; // 🔐 Add your Supabase anon/public key here
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  window.onload = async () => {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      window.location.href = "login.html";
+      return;
+    }
+    loadVehicles();
+    loadSlots();
+  };
+
+  async function loadVehicles() {
+    const { data: { user } } = await client.auth.getUser();
+    const { data } = await client
+      .from("vehicles")
+      .select("number_plate")
+      .eq("user_id", user.id);
+
+    const vSel = document.getElementById("vehicleSelect");
+    vSel.innerHTML = "";   // 🔥 clear first
+
+    data.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.number_plate;
+      opt.text = v.number_plate;
+      vSel.appendChild(opt);
+    });
+  }
+
+  async function loadSlots() {
+    const { data } = await client
+      .from("parking_slots")
+      .select("*")
+      .eq("status", "free")
+      .order("slot_code");   // 🔥 order properly
+
+    const sSel = document.getElementById("slotSelect");
+    sSel.innerHTML = "";   // 🔥 clear first
+
+    data.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;                // keep ID for DB
+      opt.text = s.slot_code;          // 🔥 SHOW F1A1 etc
+      sSel.appendChild(opt);
+    });
+  }
+
+  async function bookSlot() {
+    const vehicle = vehicleSelect.value;
+    const slotId = slotSelect.value;
+    const { data: { user } } = await client.auth.getUser();
+
+    // create booking
+    await client.from("bookings").insert([{
+      user_id: user.id,
+      vehicle_number: vehicle,
+      slot_id: slotId,
+      status: "active"
+    }]);
+
+    // mark slot as booked (NOT occupied)
+    await client
+      .from("parking_slots")
+      .update({ status: "booked" })
+      .eq("id", slotId);
+
+    msg.innerText = "Slot booked successfully ✅";
+  }
+</script>
+</div>
+</body>
+</html>

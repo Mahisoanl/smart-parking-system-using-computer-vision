@@ -1,0 +1,122 @@
+/* ===== Common Reset ===== */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f6fa;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Page Container ===== */
+.container {
+  width: 90%;
+  max-width: 900px;
+  margin: 40px auto;
+  background: #ffffff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* ===== Headings ===== */
+h2, h3 {
+  text-align: center;
+  color: #333;
+}
+
+/* ===== Inputs ===== */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* ===== Buttons ===== */
+button {
+  padding: 10px 16px;
+  margin: 5px 0;
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+/* ===== Logout / Danger Buttons ===== */
+button.danger {
+  background-color: #dc3545;
+}
+
+button.danger:hover {
+  background-color: #b02a37;
+}
+
+/* ===== Lists ===== */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ===== Parking Slot Visual ===== */
+.slot {
+  display: inline-block;
+  width: 90px;
+  height: 60px;
+  line-height: 60px;
+  text-align: center;
+  margin: 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  color: white;
+}
+
+.slot.free {
+  background-color: #28a745;
+}
+
+.slot.occupied {
+  background-color: #dc3545;
+}
+
+/* ===== Floor Section ===== */
+.floor {
+  margin-bottom: 30px;
+}
+
+.floor h4 {
+  margin-bottom: 10px;
+}
+
+/* ===== Tables (Admin Page) ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+th {
+  background-color: #f1f1f1;
+}
+
+/* ===== Message Text ===== */
+#msg {
+  margin-top: 10px;
+  color: #d9534f;
+  text-align: center;
+}

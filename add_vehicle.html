@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Vehicle</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+<div class="container">
+<h2>Add Vehicle</h2>
+
+<input id="plate" placeholder="Vehicle Number">
+<br><br>
+<button onclick="addVehicle()">Add Vehicle</button>
+
+<p id="msg"></p>
+
+<script>
+  const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+  const SUPABASE_KEY =  "";
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // 🔐 Protect page
+  window.onload = async () => {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      alert("Please login");
+      window.location.href = "login.html";
+    }
+  };
+
+  async function addVehicle() {
+    const plate = document.getElementById("plate").value;
+
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) {
+      msg.innerText = "User not found";
+      return;
+    }
+
+    const { error } = await client
+      .from("vehicles")
+      .insert([{ user_id: user.id, number_plate: plate }]);
+
+    msg.innerText = error ? error.message : "Vehicle added successfully";
+  }
+</script>
+</div>
+</body>
+</html>

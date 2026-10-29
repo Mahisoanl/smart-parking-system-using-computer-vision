@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+<div class="container">
+<h3>Login / Signup</h3>
+
+<input id="email" placeholder="Email">
+<br>
+<input id="password" type="password" placeholder="Password">
+<br><br>
+
+<button onclick="signup()">Signup</button>
+<button onclick="login()">Login</button>
+
+<p id="msg"></p>
+
+<script>
+  const SUPABASE_URL = "https://quphlpzdehgividhdori.supabase.co";
+  const SUPABASE_KEY =""; // 🔐 Add your Supabase anon/public key here
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  async function signup() {
+    const e = document.getElementById("email").value;
+    const p = document.getElementById("password").value;
+
+    const { error } = await client.auth.signUp({ email: e, password: p });
+    msg.innerText = error ? error.message : "Signup successful. Now login.";
+  }
+
+  
+
+async function login() {
+  const e = document.getElementById("email").value;
+  const p = document.getElementById("password").value;
+
+  const { data, error } = await client.auth.signInWithPassword({
+    email: e,
+    password: p
+  });
+
+  if (error) {
+    msg.innerText = error.message;
+    return;
+  }
+
+  const userId = data.user.id;
+
+  const { data: profile, error: roleError } = await client
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (roleError || !profile) {
+    msg.innerText = "Role not assigned. Contact admin.";
+    return;
+  }
+
+  if (profile.role === "admin") {
+    window.location.href = "admin.html";
+  } else {
+    window.location.href = "dashboard.html";
+  }
+}
+
+
+</script>
+</div>
+</body>
+</html>
